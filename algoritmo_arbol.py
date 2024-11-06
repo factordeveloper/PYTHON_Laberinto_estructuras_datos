@@ -29,13 +29,14 @@ class Laberinto:
                     return (i, j)
         return (-1, -1)
     
-    def _es_movimiento_valido(self, x: int, y: int, visitados: Set[Tuple[int, int]]) -> bool:
+    def _es_movimiento_valido(self, x: int, y: int, visitados: set) -> bool:
         return (0 <= x < self.tamanio and 
                 0 <= y < self.tamanio and 
                 self.laberinto[x][y] != '+' and 
                 (x, y) not in visitados)
     
     def _imprimir_laberinto(self):
+        import os
         os.system('cls' if os.name == 'nt' else 'clear')
         print("+" + "-" * (self.tamanio * 3) + "+")
         for fila in self.laberinto:
@@ -44,59 +45,24 @@ class Laberinto:
                 print(f"{celda} ", end=" ")
             print("|")
         print("+" + "-" * (self.tamanio * 3) + "+")
+        import time
         time.sleep(self.retraso)
     
-    def _es_alcanzable(self) -> bool:
-        """Verifica si hay un camino del inicio a la meta usando búsqueda en anchura (BFS)."""
-        if self.inicio == (-1, -1) or self.fin == (-1, -1):
-            return False
-
-        visitados = set()
-        cola = deque([self.inicio])
-
-        while cola:
-            x, y = cola.popleft()
-            if (x, y) == self.fin:
-                return True  # Se encontró un camino a la meta
-
-            # Revisar movimientos posibles
-            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:  # arriba, abajo, izquierda, derecha
-                nx, ny = x + dx, y + dy
-                if (0 <= nx < self.tamanio and 0 <= ny < self.tamanio and
-                        self.laberinto[nx][ny] != '+' and (nx, ny) not in visitados):
-                    visitados.add((nx, ny))
-                    cola.append((nx, ny))
-
-        return False  # No se encontró un camino
-
     def resolver(self):
-        if not self._es_alcanzable():
-            print("No se encontró solución: el destino no es alcanzable desde el inicio.")
-            return
-
         self.tiempo_inicio = time.time()
-        visitados = set()
-        camino_actual = []
-        self._resolver_recursivo(self.inicio[0], self.inicio[1], visitados, camino_actual)
+        self._resolver_recursivo(self.inicio[0], self.inicio[1], set(), [self.inicio])
         
         if not self.soluciones:
             print("No se encontró solución")
         else:
             self._imprimir_estadisticas()
-        
-    def _resolver_recursivo(self, x: int, y: int, visitados: Set[Tuple[int, int]], camino_actual: List[Tuple[int, int]]):
+    
+    def _resolver_recursivo(self, x: int, y: int, visitados: set, camino_actual: List[Tuple[int, int]]):
         if not self._es_movimiento_valido(x, y, visitados):
             return
         
         visitados.add((x, y))
         camino_actual.append((x, y))
-        
-        valor_original = self.laberinto[x][y]
-        if (x, y) != self.inicio and (x, y) != self.fin:
-            self.laberinto[x][y] = '🐀'
-        self._imprimir_laberinto()
-        if (x, y) != self.inicio and (x, y) != self.fin:
-            self.laberinto[x][y] = 'o'
         
         if (x, y) == self.fin:
             self.soluciones.append(Solucion(camino_actual.copy(), time.time() - self.tiempo_inicio))
@@ -104,13 +70,11 @@ class Laberinto:
         else:
             movimientos = [(-1, 0), (0, 1), (1, 0), (0, -1)]
             for dx, dy in movimientos:
-                self._resolver_recursivo(x + dx, y + dy, visitados, camino_actual)
+                nx, ny = x + dx, y + dy
+                self._resolver_recursivo(nx, ny, visitados, camino_actual)
         
         visitados.remove((x, y))
         camino_actual.pop()
-        if (x, y) != self.inicio and (x, y) != self.fin:
-            self.laberinto[x][y] = valor_original
-            self._imprimir_laberinto()
     
     def _imprimir_estadisticas(self):
         mas_corta = min(self.soluciones, key=lambda x: x.longitud)

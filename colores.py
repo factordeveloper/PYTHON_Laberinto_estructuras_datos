@@ -2,6 +2,9 @@ import time
 from collections import deque
 from typing import List, Tuple, Set
 import os
+from colorama import Fore, Back, Style, init
+
+init(autoreset=True)  # Para que los colores se reinicien después de cada impresión
 
 class Solucion:
     def __init__(self, camino: List[Tuple[int, int]], tiempo_encontrado: float):
@@ -41,13 +44,23 @@ class Laberinto:
         for fila in self.laberinto:
             print("|", end=" ")
             for celda in fila:
-                print(f"{celda} ", end=" ")
+                if celda == '+':
+                    print(Fore.RED + f"{celda} ", end=" ")
+                elif celda == '0':
+                    print(Fore.GREEN + f"{celda} ", end=" ")
+                elif celda == 'X':
+                    print(Fore.BLUE + f"{celda} ", end=" ")
+                elif celda == 'o':
+                    print(Fore.YELLOW + f"{celda} ", end=" ")
+                elif celda == '🐢':
+                    print(Back.YELLOW + Fore.BLACK + f"{celda} ", end=" ")
+                else:
+                    print(f"{celda} ", end=" ")
             print("|")
         print("+" + "-" * (self.tamanio * 3) + "+")
         time.sleep(self.retraso)
     
     def _es_alcanzable(self) -> bool:
-        """Verifica si hay un camino del inicio a la meta usando búsqueda en anchura (BFS)."""
         if self.inicio == (-1, -1) or self.fin == (-1, -1):
             return False
 
@@ -57,17 +70,16 @@ class Laberinto:
         while cola:
             x, y = cola.popleft()
             if (x, y) == self.fin:
-                return True  # Se encontró un camino a la meta
+                return True
 
-            # Revisar movimientos posibles
-            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:  # arriba, abajo, izquierda, derecha
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                 nx, ny = x + dx, y + dy
                 if (0 <= nx < self.tamanio and 0 <= ny < self.tamanio and
                         self.laberinto[nx][ny] != '+' and (nx, ny) not in visitados):
                     visitados.add((nx, ny))
                     cola.append((nx, ny))
 
-        return False  # No se encontró un camino
+        return False
 
     def resolver(self):
         if not self._es_alcanzable():
@@ -93,7 +105,7 @@ class Laberinto:
         
         valor_original = self.laberinto[x][y]
         if (x, y) != self.inicio and (x, y) != self.fin:
-            self.laberinto[x][y] = '🐀'
+            self.laberinto[x][y] = '🐢'
         self._imprimir_laberinto()
         if (x, y) != self.inicio and (x, y) != self.fin:
             self.laberinto[x][y] = 'o'
@@ -134,7 +146,7 @@ class Laberinto:
         
         for x, y in camino:
             if (x, y) != self.inicio and (x, y) != self.fin:
-                laberinto_solucion[x][y] = 'o'
+                laberinto_solucion[x][y] = Fore.YELLOW + 'o' + Style.RESET_ALL
         
         print("+" + "-" * (self.tamanio * 3) + "+")
         for fila in laberinto_solucion:

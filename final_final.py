@@ -75,18 +75,23 @@ class Laberinto:
             return
 
         self.tiempo_inicio = time.time()
-        visitados = set()
-        camino_actual = []
-        self._resolver_recursivo(self.inicio[0], self.inicio[1], visitados, camino_actual)
+        while True:
+            visitados = set()
+            camino_actual = []
+            encontrado = self._resolver_recursivo(self.inicio[0], self.inicio[1], visitados, camino_actual, reiniciar=True)
+            
+            # Si no se encontró una nueva solución, terminamos el bucle.
+            if not encontrado:
+                break
         
         if not self.soluciones:
             print("No se encontró solución")
         else:
             self._imprimir_estadisticas()
         
-    def _resolver_recursivo(self, x: int, y: int, visitados: Set[Tuple[int, int]], camino_actual: List[Tuple[int, int]]):
+    def _resolver_recursivo(self, x: int, y: int, visitados: Set[Tuple[int, int]], camino_actual: List[Tuple[int, int]], reiniciar: bool = False):
         if not self._es_movimiento_valido(x, y, visitados):
-            return
+            return False
         
         visitados.add((x, y))
         camino_actual.append((x, y))
@@ -101,17 +106,22 @@ class Laberinto:
         if (x, y) == self.fin:
             self.soluciones.append(Solucion(camino_actual.copy(), time.time() - self.tiempo_inicio))
             self._imprimir_laberinto()
-        else:
-            movimientos = [(-1, 0), (0, 1), (1, 0), (0, -1)]
-            for dx, dy in movimientos:
-                self._resolver_recursivo(x + dx, y + dy, visitados, camino_actual)
+            visitados.clear()  # Limpiar los visitados para la siguiente búsqueda
+            return False  # Reiniciar para buscar un segundo camino
+        
+        movimientos = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+        for dx, dy in movimientos:
+            if self._resolver_recursivo(x + dx, y + dy, visitados, camino_actual):
+                return True  # Detiene la búsqueda después de encontrar un camino
         
         visitados.remove((x, y))
         camino_actual.pop()
         if (x, y) != self.inicio and (x, y) != self.fin:
             self.laberinto[x][y] = valor_original
             self._imprimir_laberinto()
-    
+        
+        return False  # No se encontró un camino
+
     def _imprimir_estadisticas(self):
         mas_corta = min(self.soluciones, key=lambda x: x.longitud)
         mas_larga = max(self.soluciones, key=lambda x: x.longitud)
