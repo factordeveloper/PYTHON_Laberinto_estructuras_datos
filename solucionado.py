@@ -93,7 +93,7 @@ class Laberinto:
         
         valor_original = self.laberinto[x][y]
         if (x, y) != self.inicio and (x, y) != self.fin:
-            self.laberinto[x][y] = '@'
+            self.laberinto[x][y] = '🐢'
         self._imprimir_laberinto()
         if (x, y) != self.inicio and (x, y) != self.fin:
             self.laberinto[x][y] = 'o'
