@@ -1,125 +1,244 @@
+from typing import List, Tuple, Optional
 import time
-from collections import deque
-from typing import List, Tuple, Set
+from dataclasses import dataclass
 import os
 
-class Solucion:
-    def __init__(self, camino: List[Tuple[int, int]], tiempo_encontrado: float):
-        self.camino = camino
-        self.tiempo_encontrado = tiempo_encontrado
-        self.longitud = len(camino)
+@dataclass
+class Node:
+    x: int
+    y: int
+    next: Optional['Node'] = None
+    prev: Optional['Node'] = None
 
-class Laberinto:
-    def __init__(self, tamanio: int, cadena_laberinto: str, retraso_ms: int):
-        self.tamanio = tamanio
-        self.laberinto = self._crear_matriz_laberinto(cadena_laberinto)
-        self.retraso = retraso_ms / 1000
-        self.inicio = self._encontrar_posicion('0')
-        self.fin = self._encontrar_posicion('X')
-        self.soluciones: List[Solucion] = []
-        self.tiempo_inicio = 0
-
-    def _crear_matriz_laberinto(self, cadena_laberinto: str) -> List[List[str]]:
-        return [list(cadena_laberinto[i:i + self.tamanio]) for i in range(0, len(cadena_laberinto), self.tamanio)]
+class Stack:
+    def __init__(self):
+        self.top = None
+        self.size = 0
     
-    def _encontrar_posicion(self, caracter: str) -> Tuple[int, int]:
-        for i in range(self.tamanio):
-            for j in range(self.tamanio):
-                if self.laberinto[i][j] == caracter:
+    def push(self, x: int, y: int) -> None:
+        new_node = Node(x, y)
+        new_node.next = self.top
+        self.top = new_node
+        self.size += 1
+    
+    def pop(self) -> Optional[Tuple[int, int]]:
+        if not self.top:
+            return None
+        coords = (self.top.x, self.top.y)
+        self.top = self.top.next
+        self.size -= 1
+        return coords
+
+class Queue:
+    def __init__(self):
+        self.front = None
+        self.rear = None
+        self.size = 0
+    
+    def enqueue(self, x: int, y: int) -> None:
+        new_node = Node(x, y)
+        if not self.rear:
+            self.front = self.rear = new_node
+        else:
+            self.rear.next = new_node
+            new_node.prev = self.rear
+            self.rear = new_node
+        self.size += 1
+    
+    def dequeue(self) -> Optional[Tuple[int, int]]:
+        if not self.front:
+            return None
+        coords = (self.front.x, self.front.y)
+        self.front = self.front.next
+        if self.front:
+            self.front.prev = None
+        else:
+            self.rear = None
+        self.size -= 1
+        return coords
+
+class TreeNode:
+    def __init__(self, x: int, y: int, parent: Optional['TreeNode'] = None):
+        self.x = x
+        self.y = y
+        self.parent = parent
+        self.children: List['TreeNode'] = []
+
+@dataclass
+class Solution:
+    path: List[Tuple[int, int]]
+    time_found: float
+    length: int
+
+class MazeSolver:
+    def __init__(self, size: int, maze_string: str, delay_ms: int):
+        self.size = size
+        self.maze = [list(maze_string[i:i+size]) for i in range(0, len(maze_string), size)]
+        self.delay = delay_ms / 1000
+        self.start = self._find_position('0')
+        self.end = self._find_position('X')
+        self.solutions: List[Solution] = []
+        self.current_position = self.start
+        self.start_time = time.time()
+    
+    def _find_position(self, char: str) -> Tuple[int, int]:
+        for i in range(self.size):
+            for j in range(self.size):
+                if self.maze[i][j] == char:
                     return (i, j)
         return (-1, -1)
     
-    def _es_movimiento_valido(self, x: int, y: int, visitados: Set[Tuple[int, int]]) -> bool:
-        return (0 <= x < self.tamanio and 
-                0 <= y < self.tamanio and 
-                self.laberinto[x][y] != '+' and 
-                (x, y) not in visitados)
+    def _is_valid_move(self, x: int, y: int, visited: set) -> bool:
+        return (0 <= x < self.size and 
+                0 <= y < self.size and 
+                self.maze[x][y] != '+' and 
+                (x, y) not in visited)
     
-    def _imprimir_laberinto(self):
+    def _print_maze(self):
         os.system('cls' if os.name == 'nt' else 'clear')
-        print("+" + "-" * (self.tamanio * 3) + "+")
-        for fila in self.laberinto:
+        print("+" + "-" * (self.size * 4) + "+")
+        for i in range(self.size):
             print("|", end=" ")
-            for celda in fila:
-                print(f"{celda} ", end=" ")
+            for j in range(self.size):
+                cell = self.maze[i][j]
+                if (i, j) == self.current_position and cell not in ['0', 'X']:
+                    print("@", end="  ")
+                else:
+                    print(f"{cell}", end="  ")
             print("|")
-        print("+" + "-" * (self.tamanio * 3) + "+")
-        time.sleep(self.retraso)
-
-    def resolver(self):
-        self.tiempo_inicio = time.time()
-        pila = [(self.inicio, [self.inicio], set([self.inicio]))]
-
-        while pila:
-            (x, y), camino_actual, visitados = pila.pop()
+        print("+" + "-" * (self.size * 4) + "+")
+        time.sleep(self.delay)
+    
+    def _move_to(self, x: int, y: int, visited: set):
+        old_x, old_y = self.current_position
+        
+        # Limpiar posición anterior si no es inicio ni fin
+        if self.maze[old_x][old_y] not in ['0', 'X']:
+            if (old_x, old_y) in visited:
+                self.maze[old_x][old_y] = 'o'
+            else:
+                self.maze[old_x][old_y] = ' '
+        
+        # Actualizar posición actual
+        self.current_position = (x, y)
+        if self.maze[x][y] not in ['0', 'X']:
+            self.maze[x][y] = '@'
+        
+        self._print_maze()
+    
+    def solve(self):
+        if not self._verify_maze():
+            print("El laberinto no es válido o no tiene solución posible.")
+            return
+        
+        self._find_all_solutions()
+        self._print_final_statistics()
+    
+    def _verify_maze(self) -> bool:
+        return (self.start != (-1, -1) and 
+                self.end != (-1, -1) and 
+                self.start != self.end)
+    
+    def _find_all_solutions(self):
+        stack = Stack()
+        stack.push(self.start[0], self.start[1])
+        visited = {self.start}
+        path = [self.start]
+        
+        while stack.size > 0:
+            x, y = stack.pop() or (0, 0)
+            self._move_to(x, y, visited)
             
-            if (x, y) == self.fin:
-                self.soluciones.append(Solucion(camino_actual, time.time() - self.tiempo_inicio))
-                self._imprimir_laberinto()
+            if (x, y) == self.end:
+                solution_time = time.time() - self.start_time
+                self.solutions.append(Solution(
+                    path=path.copy(),
+                    time_found=solution_time,
+                    length=len(path)
+                ))
+                if len(path) > 1:
+                    path.pop()
+                    visited.remove((x, y))
                 continue
             
-            for dx, dy in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
+            # Explorar en las cuatro direcciones
+            neighbors = []
+            for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:  # derecha, abajo, izquierda, arriba
                 nx, ny = x + dx, y + dy
-                if self._es_movimiento_valido(nx, ny, visitados):
-                    nuevo_camino = camino_actual + [(nx, ny)]
-                    nuevo_visitados = visitados | {(nx, ny)}
-                    pila.append(((nx, ny), nuevo_camino, nuevo_visitados))
-
-                    # Marcar el camino en el laberinto
-                    if (nx, ny) != self.fin:
-                        self.laberinto[nx][ny] = '🐢'
-                    self._imprimir_laberinto()
-                    if (nx, ny) != self.fin:
-                        self.laberinto[nx][ny] = 'o'
-
-        if not self.soluciones:
-            print("No se encontró solución")
-        else:
-            self._imprimir_estadisticas()
-
-    def _imprimir_estadisticas(self):
-        mas_corta = min(self.soluciones, key=lambda x: x.longitud)
-        mas_larga = max(self.soluciones, key=lambda x: x.longitud)
-        tiempo_promedio = sum(sol.tiempo_encontrado for sol in self.soluciones) / len(self.soluciones)
+                if self._is_valid_move(nx, ny, visited):
+                    neighbors.append((nx, ny))
+            
+            # Si no hay movimientos válidos, retroceder
+            if not neighbors:
+                if len(path) > 1:
+                    path.pop()
+                    if (x, y) not in [self.start, self.end]:
+                        visited.remove((x, y))
+                continue
+            
+            # Agregar vecinos válidos a la pila
+            for nx, ny in neighbors:
+                stack.push(nx, ny)
+                visited.add((nx, ny))
+                path.append((nx, ny))
+    
+    def _print_final_statistics(self):
+        if not self.solutions:
+            print("\nNo se encontraron soluciones.")
+            return
         
-        print("\nEstadísticas:")
-        print(f"Total de soluciones encontradas: {len(self.soluciones)}")
-        print(f"\nSolución más corta (longitud {mas_corta.longitud}):")
-        self._imprimir_solucion(mas_corta.camino)
-        print(f"Tiempo para encontrar: {mas_corta.tiempo_encontrado:.2f} segundos")
+        shortest = min(self.solutions, key=lambda x: x.length)
+        longest = max(self.solutions, key=lambda x: x.length)
+        avg_time = sum(sol.time_found for sol in self.solutions) / len(self.solutions)
         
-        print(f"\nSolución más larga (longitud {mas_larga.longitud}):")
-        self._imprimir_solucion(mas_larga.camino)
-        print(f"Tiempo para encontrar: {mas_larga.tiempo_encontrado:.2f} segundos")
+        print("\nEstadísticas finales:")
+        print(f"Número total de soluciones encontradas: {len(self.solutions)}")
         
-        print(f"\nTiempo promedio para encontrar una solución: {tiempo_promedio:.2f} segundos")
-
-    def _imprimir_solucion(self, camino: List[Tuple[int, int]]):
-        laberinto_solucion = [[celda for celda in fila] for fila in self.laberinto]
+        print("\nSolución más corta:")
+        print(f"Longitud: {shortest.length} pasos")
+        print(f"Tiempo: {shortest.time_found:.3f} segundos")
+        self._print_solution(shortest.path)
         
-        for x, y in camino:
-            if (x, y) != self.inicio and (x, y) != self.fin:
-                laberinto_solucion[x][y] = 'o'
+        print("\nSolución más larga:")
+        print(f"Longitud: {longest.length} pasos")
+        print(f"Tiempo: {longest.time_found:.3f} segundos")
+        self._print_solution(longest.path)
         
-        print("+" + "-" * (self.tamanio * 3) + "+")
-        for fila in laberinto_solucion:
+        print(f"\nTiempo promedio para encontrar solución: {avg_time:.3f} segundos")
+    
+    def _print_solution(self, path: List[Tuple[int, int]]):
+        solution_maze = [[cell for cell in row] for row in self.maze]
+        for x, y in path:
+            if (x, y) not in [self.start, self.end]:
+                solution_maze[x][y] = 'o'
+        
+        print("+" + "-" * (self.size * 4) + "+")
+        for row in solution_maze:
             print("|", end=" ")
-            for celda in fila:
-                print(f"{celda} ", end=" ")
+            for cell in row:
+                print(f"{cell}", end="  ")
             print("|")
-        print("+" + "-" * (self.tamanio * 3) + "+")
+        print("+" + "-" * (self.size * 4) + "+")
 
 def main():
-    tamanio = int(input("Ingrese el tamaño del laberinto (n x n): "))
-    cadena_laberinto = input(f"Ingrese el laberinto como una cadena de {tamanio * tamanio} caracteres: ")
-    retraso = int(input("Ingrese el retraso entre pasos (milisegundos): "))
+    # Solicitar datos al usuario
+    size = int(input("Ingrese el tamaño del laberinto (n x n): "))
+    print("\nUse los siguientes caracteres:")
+    print("0: Posición inicial")
+    print("X: Posición final")
+    print("+: Paredes (No transitables)")
+    print("  (espacio): Celdas transitables")
+    maze_string = input(f"\nIngrese el laberinto como una cadena de {size*size} caracteres: ")
+    delay = int(input("Ingrese el retraso entre pasos (milisegundos): "))
     
-    if len(cadena_laberinto) != tamanio * tamanio:
-        print(f"Error: La cadena debe tener exactamente {tamanio * tamanio} caracteres")
+    # Validar entrada
+    if len(maze_string) != size * size:
+        print(f"Error: La cadena debe tener exactamente {size*size} caracteres")
         return
     
-    laberinto = Laberinto(tamanio, cadena_laberinto, retraso)
-    laberinto.resolver()
+    # Resolver el laberinto
+    solver = MazeSolver(size, maze_string, delay)
+    solver.solve()
 
 if __name__ == "__main__":
     main()
