@@ -13,21 +13,56 @@ class Nodo:
 class Pila:
     def __init__(self):
         self.tope = None
-        self.tamanio = 0
+        self.tamaño = 0
     
     def apilar(self, x: int, y: int) -> None:
         nuevo_nodo = Nodo(x, y)
         nuevo_nodo.siguiente = self.tope
         self.tope = nuevo_nodo
-        self.tamanio += 1
+        self.tamaño += 1
     
     def desapilar(self) -> Optional[Tuple[int, int]]:
         if not self.tope:
             return None
-        coordenadas = (self.tope.x, self.tope.y)
+        coords = (self.tope.x, self.tope.y)
         self.tope = self.tope.siguiente
-        self.tamanio -= 1
-        return coordenadas
+        self.tamaño -= 1
+        return coords
+
+class Cola:
+    def __init__(self):
+        self.frente = None
+        self.final = None
+        self.tamaño = 0
+    
+    def encolar(self, x: int, y: int) -> None:
+        nuevo_nodo = Nodo(x, y)
+        if not self.final:
+            self.frente = self.final = nuevo_nodo
+        else:
+            self.final.siguiente = nuevo_nodo
+            nuevo_nodo.anterior = self.final
+            self.final = nuevo_nodo
+        self.tamaño += 1
+    
+    def desencolar(self) -> Optional[Tuple[int, int]]:
+        if not self.frente:
+            return None
+        coords = (self.frente.x, self.frente.y)
+        self.frente = self.frente.siguiente
+        if self.frente:
+            self.frente.anterior = None
+        else:
+            self.final = None
+        self.tamaño -= 1
+        return coords
+
+class NodoArbol:
+    def __init__(self, x: int, y: int, padre: Optional['NodoArbol'] = None):
+        self.x = x
+        self.y = y
+        self.padre = padre
+        self.hijos: List['NodoArbol'] = []
 
 @dataclass
 class Solucion:
@@ -35,10 +70,10 @@ class Solucion:
     tiempo_encontrado: float
     longitud: int
 
-class ResolvedorLaberinto:
-    def __init__(self, tamanio: int, texto_laberinto: str, retraso_ms: int):
-        self.tamanio = tamanio
-        self.laberinto = [list(texto_laberinto[i:i+tamanio]) for i in range(0, len(texto_laberinto), tamanio)]
+class SolucionadorLaberinto:
+    def __init__(self, tamaño: int, cadena_laberinto: str, retraso_ms: int):
+        self.tamaño = tamaño
+        self.laberinto = [list(cadena_laberinto[i:i+tamaño]) for i in range(0, len(cadena_laberinto), tamaño)]
         self.retraso = retraso_ms / 1000
         self.inicio = self._encontrar_posicion('0')
         self.fin = self._encontrar_posicion('X')
@@ -46,32 +81,32 @@ class ResolvedorLaberinto:
         self.posicion_actual = self.inicio
         self.tiempo_inicio = time.time()
     
-    def _encontrar_posicion(self, caracter: str) -> Tuple[int, int]:
-        for i in range(self.tamanio):
-            for j in range(self.tamanio):
-                if self.laberinto[i][j] == caracter:
+    def _encontrar_posicion(self, char: str) -> Tuple[int, int]:
+        for i in range(self.tamaño):
+            for j in range(self.tamaño):
+                if self.laberinto[i][j] == char:
                     return (i, j)
         return (-1, -1)
     
     def _es_movimiento_valido(self, x: int, y: int, visitados: set) -> bool:
-        return (0 <= x < self.tamanio and 
-                0 <= y < self.tamanio and 
+        return (0 <= x < self.tamaño and 
+                0 <= y < self.tamaño and 
                 self.laberinto[x][y] != '+' and 
                 (x, y) not in visitados)
     
     def _imprimir_laberinto(self):
         os.system('cls' if os.name == 'nt' else 'clear')
-        print("+" + "-" * (self.tamanio * 4 - 1) + "+")
-        for i in range(self.tamanio):
+        print("+" + "-" * (self.tamaño * 4) + "+")
+        for i in range(self.tamaño):
             print("|", end=" ")
-            for j in range(self.tamanio):
+            for j in range(self.tamaño):
                 celda = self.laberinto[i][j]
                 if (i, j) == self.posicion_actual and celda not in ['0', 'X']:
                     print("@", end="  ")
                 else:
                     print(f"{celda}", end="  ")
             print("|")
-        print("+" + "-" * (self.tamanio * 4 - 1) + "+")
+        print("+" + "-" * (self.tamaño * 4) + "+")
         time.sleep(self.retraso)
     
     def _mover_a(self, x: int, y: int, visitados: set):
@@ -110,7 +145,7 @@ class ResolvedorLaberinto:
         visitados = {self.inicio}
         camino = [self.inicio]
         
-        while pila.tamanio > 0:
+        while pila.tamaño > 0:
             x, y = pila.desapilar() or (0, 0)
             self._mover_a(x, y, visitados)
             
@@ -161,15 +196,15 @@ class ResolvedorLaberinto:
         
         print("\nSolución más corta:")
         print(f"Longitud: {mas_corta.longitud} pasos")
-        print(f"Tiempo para encontrar: {mas_corta.tiempo_encontrado:.3f} segundos")
+        print(f"Tiempo: {mas_corta.tiempo_encontrado:.3f} segundos")
         self._imprimir_solucion(mas_corta.camino)
         
         print("\nSolución más larga:")
         print(f"Longitud: {mas_larga.longitud} pasos")
-        print(f"Tiempo para encontrar: {mas_larga.tiempo_encontrado:.3f} segundos")
+        print(f"Tiempo: {mas_larga.tiempo_encontrado:.3f} segundos")
         self._imprimir_solucion(mas_larga.camino)
         
-        print(f"\nTiempo promedio para encontrar una nueva solución: {tiempo_promedio:.3f} segundos")
+        print(f"\nTiempo promedio para encontrar solución: {tiempo_promedio:.3f} segundos")
     
     def _imprimir_solucion(self, camino: List[Tuple[int, int]]):
         laberinto_solucion = [[celda for celda in fila] for fila in self.laberinto]
@@ -177,33 +212,33 @@ class ResolvedorLaberinto:
             if (x, y) not in [self.inicio, self.fin]:
                 laberinto_solucion[x][y] = 'o'
         
-        print("+" + "-" * (self.tamanio * 4 - 1) + "+")
+        print("+" + "-" * (self.tamaño * 4) + "+")
         for fila in laberinto_solucion:
             print("|", end=" ")
             for celda in fila:
                 print(f"{celda}", end="  ")
             print("|")
-        print("+" + "-" * (self.tamanio * 4 - 1) + "+")
+        print("+" + "-" * (self.tamaño * 4) + "+")
 
 def main():
     # Solicitar datos al usuario
-    tamanio = int(input("Ingrese el tamaño del laberinto (n x n): "))
+    tamaño = int(input("Ingrese el tamaño del laberinto (n x n): "))
     print("\nUse los siguientes caracteres:")
-    print("O: Posición inicial")
+    print("0: Posición inicial")
     print("X: Posición final")
     print("+: Paredes (No transitables)")
     print("  (espacio): Celdas transitables")
-    texto_laberinto = input(f"\nIngrese el laberinto como una cadena de {tamanio*tamanio} caracteres: ")
+    cadena_laberinto = input(f"\nIngrese el laberinto como una cadena de {tamaño*tamaño} caracteres: ")
     retraso = int(input("Ingrese el retraso entre pasos (milisegundos): "))
     
     # Validar entrada
-    if len(texto_laberinto) != tamanio * tamanio:
-        print(f"Error: La cadena debe tener exactamente {tamanio*tamanio} caracteres")
+    if len(cadena_laberinto) != tamaño * tamaño:
+        print(f"Error: La cadena debe tener exactamente {tamaño*tamaño} caracteres")
         return
     
     # Resolver el laberinto
-    resolvedor = ResolvedorLaberinto(tamanio, texto_laberinto, retraso)
-    resolvedor.resolver()
+    solucionador = SolucionadorLaberinto(tamaño, cadena_laberinto, retraso)
+    solucionador.resolver()
 
 if __name__ == "__main__":
     main()
