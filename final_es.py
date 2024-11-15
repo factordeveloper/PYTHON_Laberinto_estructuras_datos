@@ -1,6 +1,8 @@
 from typing import List, Tuple, Optional
-import time
 from dataclasses import dataclass
+
+import time
+
 import os
 
 @dataclass

@@ -1,5 +1,7 @@
 import time
 import os
+from colorama import Fore, Back, Style, init
+
 
 class Node:
     def __init__(self, x, y, next=None, prev=None):
