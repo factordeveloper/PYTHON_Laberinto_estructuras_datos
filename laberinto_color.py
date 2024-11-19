@@ -109,7 +109,7 @@ class MazeSolver:
         self._print_maze()
     
     def _print_maze(self):
-        #os.system('cls' if os.name == 'nt' else 'clear')
+        os.system('cls' if os.name == 'nt' else 'clear')
         print(Fore.YELLOW + "+" + "-" * (self.size * 3) + "+" + Style.RESET_ALL)
         for i in range(self.size):
             print(Fore.YELLOW + "|", end=" " + Style.RESET_ALL)
