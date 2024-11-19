@@ -111,7 +111,7 @@ class MazeSolver:
     
     def _print_maze(self):
         os.system('cls' if os.name == 'nt' else 'clear')
-        print("+" + "-" * (self.size * 4) + "+")
+        print("+" + "-" * (self.size * 3) + "+")
         for i in range(self.size):
             print("|", end=" ")
             for j in range(self.size):
@@ -121,7 +121,7 @@ class MazeSolver:
                 else:
                     print(f"{cell}", end="  ")
             print("|")
-        print("+" + "-" * (self.size * 4) + "+")
+        print("+" + "-" * (self.size * 3) + "+")
         time.sleep(self.delay)
     
     def solve(self):
@@ -207,13 +207,13 @@ class MazeSolver:
             if (x, y) not in [self.start, self.end]:
                 solution_maze[x][y] = 'o'
         
-        print("+" + "-" * (self.size * 4) + "+")
+        print("+" + "-" * (self.size * 3) + "+")
         for row in solution_maze:
             print("|", end=" ")
             for cell in row:
                 print(f"{cell}", end="  ")
             print("|")
-        print("+" + "-" * (self.size * 4) + "+")
+        print("+" + "-" * (self.size * 3) + "+")
 
 def main():
     size = int(input("Ingrese el tamaño del laberinto (n x n): "))
